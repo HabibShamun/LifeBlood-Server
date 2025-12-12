@@ -1,6 +1,6 @@
 const express=require('express')
 const cors=require('cors')
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const app=express()
 require('dotenv').config()
 app.use(express.json())
@@ -87,6 +87,35 @@ async function run() {
         const user=await  userCollection.findOne(query)
         res.send({role:user?.role||'user'})
     })
+
+    app.patch('/users/:id/role', async(req,res)=>{
+      const id=req.params.id
+      const roleInfo=req.body
+      const query= {_id: new ObjectId(id)}
+      
+      const updatedDoc={
+        $set:{
+          role:roleInfo.role
+        }
+      }
+      const result=await userCollection.updateOne(query,updatedDoc)
+      res.send(result)
+    })
+
+        app.patch('/users/:id/status', async(req,res)=>{
+      const id=req.params.id
+      const statusInfo=req.body
+      const query= {_id: new ObjectId(id)}
+      
+      const updatedDoc={
+        $set:{
+          status:statusInfo.status
+        }
+      }
+      const result=await userCollection.updateOne(query,updatedDoc)
+      res.send(result)
+    })
+
 
 
     //donation request api
