@@ -134,6 +134,14 @@ async function run() {
       res.send(result)
     })
 
+        app.get('/donationRequests/:email', async(req,res)=>{
+          const requesterEmail=req.params.email
+          const query={requesterEmail}
+      const cursor= donationRequestCollection.find(query)
+      const result = await cursor.toArray()
+      res.send(result)
+    })
+
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
