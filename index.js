@@ -7,7 +7,7 @@ app.use(express.json())
 app.use(cors())
 const port=process.env.PORT||5000
 const uri = `mongodb+srv://${process.env.USER_NAME}:${process.env.PASS}@cluster0.0idmfrx.mongodb.net/?appName=Cluster0`
-
+const stripe = require('stripe')(process.env.Stripe_Secret)
 
 const client = new MongoClient(uri, {
   serverApi: {
@@ -51,6 +51,7 @@ async function run() {
     const db=client.db('lifeblood_db')
     const userCollection=db.collection('users')
     const donationRequestCollection=db.collection('donationRequests')
+    const donationCollection=db.collection('donations')
     app.post('/users', async(req,res)=>{
         const user=req.body
         user.role='donor'
@@ -142,6 +143,75 @@ async function run() {
       res.send(result)
     })
 
+
+    //funding payment related api
+
+
+    app.post('/create-checkout-session',async(req,res)=>{
+      const fundingInfo=req.body
+      const amount=parseInt(fundingInfo.donatedAmount)*100
+
+        const session = await stripe.checkout.sessions.create({
+    line_items: [
+      {
+       
+        price_data:{
+          currency:'USD',
+          unit_amount:amount,
+          product_data:{
+            name:'Donation'
+          }
+        },
+        quantity: 1,
+      },
+    ],
+    mode: 'payment',
+    metadata: {
+  funderEmail: fundingInfo.funderEmail,
+  funderName: fundingInfo.funderName,
+  amount:fundingInfo.donatedAmount
+},
+    success_url: `${process.env.SITE_DOMAIN}/successfulDonation?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${process.env.SITE_DOMAIN}/unsuccessful`,
+  });
+
+console.log(session)
+res.send({url: session.url})
+    })
+
+
+
+app.get('/checkout-session/:id', async (req, res) => {
+  try {
+    const session = await stripe.checkout.sessions.retrieve(req.params.id);
+    res.send(session);
+  } catch (error) {
+    console.error('Error retrieving session:', error);
+    res.status(500).send({ error: 'Failed to retrieve session' });
+  }
+});
+
+
+app.post('/donations', async (req, res) => {
+  try {
+    const donation = req.body;
+    const query = { stripeSessionId: donation.stripeSessionId };
+
+    const entryExists = await donationCollection.findOne(query);
+
+    if (!entryExists) {
+      const result = await donationCollection.insertOne(donation);
+      return res.send(result);
+    }
+
+    return res.status(409).send({ message: 'Donation entry already exists' }); // 409 Conflict is more appropriate than 401
+  } catch (error) {
+    console.error('Error saving donation:', error);
+    res.status(500).send({ error: 'Failed to save donation' });
+  }
+});
+
+    
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
