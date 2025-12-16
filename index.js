@@ -67,12 +67,32 @@ async function run() {
         res.send(result)
     })
 
-    app.get('/users',verifyFBToken, async(req,res)=>{
+    app.get('/users', async(req,res)=>{
         const query={}
         const cursor= userCollection.find(query)
         const result=await cursor.toArray()
         res.send(result)
     })
+    app.get('/users/search', async (req, res) => {
+  try {
+    const { bloodType, district, upazila } = req.query;
+
+    const query = {
+      status: "active",
+      role: { $in: ["donor", "volunteer"] }
+    };
+
+    if (bloodType) query.bloodType = bloodType;
+    if (district) query.district = district;   // ✅ match schema
+    if (upazila) query.upazila = upazila;      // ✅ match schema
+
+    const result = await userCollection.find(query).toArray();
+    res.send(result); // always send an array
+  } catch (error) {
+    console.error("Error searching donors:", error);
+    res.status(500).send({ error: "Failed to search donors" });
+  }
+});
 
        app.get('/users/:email', async(req,res)=>{
         const email=req.params.email
@@ -88,6 +108,12 @@ async function run() {
         const user=await  userCollection.findOne(query)
         res.send({role:user?.role||'user'})
     })
+    // Search donors (users with status active and role donor/volunteer)
+// Search donors (users with status active and role donor/volunteer)
+
+
+
+
 
     app.patch('/users/:id/role', async(req,res)=>{
       const id=req.params.id
@@ -129,19 +155,84 @@ async function run() {
       res.send(result) 
     })
 
-    app.get('/donationRequests', async(req,res)=>{
-      const cursor= donationRequestCollection.find()
-      const result = await cursor.toArray()
-      res.send(result)
-    })
+    // Get all donation requests
+app.get('/donationRequests', async (req, res) => {
+  const cursor = donationRequestCollection.find();
+  const result = await cursor.toArray();
+  res.send(result);
+});
 
-        app.get('/donationRequests/:email', async(req,res)=>{
-          const requesterEmail=req.params.email
-          const query={requesterEmail}
-      const cursor= donationRequestCollection.find(query)
-      const result = await cursor.toArray()
-      res.send(result)
-    })
+// Get donation requests by requester email
+app.get('/donationRequests/email/:email', async (req, res) => {
+  const requesterEmail = req.params.email;
+  const query = { requesterEmail };
+  const cursor = donationRequestCollection.find(query);
+  const result = await cursor.toArray();
+  res.send(result);
+});
+
+// Get a single donation request by ID
+app.get('/donationRequests/id/:id', async (req, res) => {
+  try {
+    const id = req.params.id;
+    const query = { _id: new ObjectId(id) };
+    const result = await donationRequestCollection.findOne(query);
+    res.send(result);
+  } catch (error) {
+    console.error("Error fetching donation request by ID:", error);
+    res.status(500).send({ error: "Failed to fetch donation request" });
+  }
+});
+
+    app.patch('/donationRequests/:id/status', async(req,res)=>{
+  const status=req.body.status
+  const id=req.params.id;
+  const query= {_id:new ObjectId(id)}
+  const updatedDoc={
+    $set:{
+      status:status
+    }
+
+  }
+    const result= await donationRequestCollection.updateOne(query,updatedDoc)
+    res.send(result)
+})
+
+app.patch('/donationRequests/:id', async (req, res) => {
+  try {
+    const id = req.params.id;
+    const info = req.body;
+
+    const query = { _id: new ObjectId(id) };
+    const updatedDoc = {
+      $set: {
+        recipientName: info.recipientName,
+        recipientDistrict: info.recipientDistrict,
+        recipientUpazila: info.recipientUpazila,
+        hospitalName: info.hospitalName,
+        hospitalAddress: info.hospitalAddress,
+        bloodType: info.bloodType,
+        donationDate: info.donationDate,
+        donationTime: info.donationTime,
+        donationMessage: info.donationMessage,
+      },
+    };
+
+    const result = await donationRequestCollection.updateOne(query, updatedDoc);
+    res.send(result);
+  } catch (error) {
+    console.error("Error updating donation request:", error);
+    res.status(500).send({ error: "Failed to update donation request" });
+  }
+});
+
+
+app.delete('/donationRequests/:id', async(req,res)=>{
+  const id=req.params.id
+  const query={_id: new ObjectId(id)}
+  const result= await donationRequestCollection.deleteOne(query)
+  res.send(result)
+})
 
 
     //funding payment related api
@@ -210,6 +301,14 @@ app.post('/donations', async (req, res) => {
     res.status(500).send({ error: 'Failed to save donation' });
   }
 });
+
+app.get('/donations', async(req,res)=>{
+  const cursor =donationCollection.find()
+  const result =await cursor.toArray()
+  res.send(result)
+})
+
+
 
     
 
