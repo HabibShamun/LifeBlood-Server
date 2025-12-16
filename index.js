@@ -46,7 +46,7 @@ const verifyFBToken=async(req,res,next)=>{
 
 async function run() {
   try {
-    // Connect the client to the server	(optional starting in v4.7)
+    // Connect the client to the server
     await client.connect();
     const db=client.db('lifeblood_db')
     const userCollection=db.collection('users')
@@ -83,11 +83,11 @@ async function run() {
     };
 
     if (bloodType) query.bloodType = bloodType;
-    if (district) query.district = district;   // ✅ match schema
-    if (upazila) query.upazila = upazila;      // ✅ match schema
+    if (district) query.district = district;   
+    if (upazila) query.upazila = upazila;      
 
     const result = await userCollection.find(query).toArray();
-    res.send(result); // always send an array
+    res.send(result); 
   } catch (error) {
     console.error("Error searching donors:", error);
     res.status(500).send({ error: "Failed to search donors" });
