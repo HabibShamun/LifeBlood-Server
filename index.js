@@ -44,6 +44,8 @@ const verifyFBToken=async(req,res,next)=>{
     
 }
 
+
+
 async function run() {
   try {
     // Connect the client to the server
@@ -54,6 +56,26 @@ async function run() {
     const donationCollection=db.collection('donations')
     const bloodDonationCollection=db.collection('bloodDonation')
     const userMessagesCollection=db.collection('messages')
+const verifyAdmin = async (req, res, next) => {
+  try {
+    const email = req.decoded_email; // make sure this is set by your JWT verify middleware
+    if (!email) {
+      return res.status(401).send({ message: 'Unauthorized: no email found in token' });
+    }
+
+    const user = await userCollection.findOne({ email });
+
+    if (!user || user.role !== 'admin') {
+      return res.status(403).send({ message: 'Forbidden: admin access required' });
+    }
+
+    // user is admin → proceed
+    next();
+  } catch (error) {
+    console.error('Error verifying admin:', error);
+    res.status(500).send({ message: 'Internal server error while verifying admin' });
+  }
+};
 
     app.post('/messages',async(req,res)=>{
       const query=req.body
