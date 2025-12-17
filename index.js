@@ -334,6 +334,11 @@ app.get('/donation/total', async (req, res) => {
   }
 });
 
+app.get('/donation/:id/details', async (req, res) => {
+  const query = { _id: new ObjectId(req.params.id) };
+  const result = await donationCollection.findOne(query);
+  res.send(result);
+});
 
 
 
