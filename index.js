@@ -349,6 +349,19 @@ app.get('/donation/:id/details', async (req, res) => {
   const result = await donationCollection.findOne(query);
   res.send(result);
 });
+// Get donations by funder email
+app.get('/donations/email/:email', async (req, res) => {
+  try {
+    const funderEmail = req.params.email;
+    const query = { funderEmail };
+    const cursor = donationCollection.find(query).sort({ createdAt: -1 });
+    const result = await cursor.toArray();
+    res.send(result);
+  } catch (error) {
+    console.error("Error fetching donations by email:", error);
+    res.status(500).send({ error: "Failed to fetch donations" });
+  }
+});
 
 
 
