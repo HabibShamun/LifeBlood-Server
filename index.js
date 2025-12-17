@@ -52,6 +52,7 @@ async function run() {
     const userCollection=db.collection('users')
     const donationRequestCollection=db.collection('donationRequests')
     const donationCollection=db.collection('donations')
+    const bloodDonationCollection=db.collection('bloodDonation')
     app.post('/users', async(req,res)=>{
         const user=req.body
         user.role='donor'
@@ -106,7 +107,7 @@ async function run() {
         const email=req.params.email
         const query={email}
         const user=await  userCollection.findOne(query)
-        res.send({role:user?.role||'user'})
+        res.send({role:user?.role||'donor'})
     })
     // Search donors (users with status active and role donor/volunteer)
 // Search donors (users with status active and role donor/volunteer)
@@ -157,7 +158,7 @@ async function run() {
 
     // Get all donation requests
 app.get('/donationRequests', async (req, res) => {
-  const cursor = donationRequestCollection.find();
+  const cursor = donationRequestCollection.find().sort({createdAt:-1}).limit(3);
   const result = await cursor.toArray();
   res.send(result);
 });
@@ -165,11 +166,14 @@ app.get('/donationRequests', async (req, res) => {
 // Get donation requests by requester email
 app.get('/donationRequests/email/:email', async (req, res) => {
   const requesterEmail = req.params.email;
+  const limit = parseInt(req.query.limit) || 0; // 0 means no limit
   const query = { requesterEmail };
-  const cursor = donationRequestCollection.find(query);
+  let cursor = donationRequestCollection.find(query).sort({ createdAt: -1 });
+  if (limit > 0) cursor = cursor.limit(limit);
   const result = await cursor.toArray();
   res.send(result);
 });
+
 
 // Get a single donation request by ID
 app.get('/donationRequests/id/:id', async (req, res) => {
@@ -308,7 +312,56 @@ app.get('/donations', async(req,res)=>{
   res.send(result)
 })
 
+// Total donation amount endpoint
+app.get('/donation/total', async (req, res) => {
+  try {
+    const pipeline = [
+      {
+        $group: {
+          _id: null,
+          totalAmount: { $sum: { $toDouble: "$amount" } } // cast string → number
+        }
+      }
+    ];
 
+    const result = await donationCollection.aggregate(pipeline).toArray();
+    const total = result.length > 0 ? result[0].totalAmount : 0;
+
+    res.send({ totalAmount: total });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send({ error: "Failed to calculate total donations" });
+  }
+});
+
+
+
+
+
+//blood donations
+
+app.post('/bloodDonation', async(req,res)=>{
+  const query= req.body
+  query.createdAt=new Date()
+  const result= await bloodDonationCollection.insertOne(query)
+  res.send(result)
+})
+app.get('/bloodDonation', async(req,res)=>{
+  const cursor= bloodDonationCollection.find()
+  const result= await cursor.toArray()
+  res.send(result)
+})
+
+app.get('/bloodDonation/:email', async(req,res)=>{
+  const donorEmail= req.params.email
+   const limit = parseInt(req.query.limit) || 0; 
+  const query={donorEmail}
+  const cursor= bloodDonationCollection.find(query).sort({createdAt:-1})
+  if (limit > 0) cursor = cursor.limit(limit);
+  const result= await cursor.toArray()
+  res.send(result)
+
+})
 
     
 
