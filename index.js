@@ -53,6 +53,16 @@ async function run() {
     const donationRequestCollection=db.collection('donationRequests')
     const donationCollection=db.collection('donations')
     const bloodDonationCollection=db.collection('bloodDonation')
+    const userMessagesCollection=db.collection('messages')
+
+    app.post('/messages',async(req,res)=>{
+      const query=req.body
+      query.createdAt=new Date()
+      const result= userMessagesCollection.insertOne(query)
+      res.send(result)
+    })
+
+
     app.post('/users', async(req,res)=>{
         const user=req.body
         user.role='donor'
